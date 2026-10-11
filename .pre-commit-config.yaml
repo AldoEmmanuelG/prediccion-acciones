@@ -1,0 +1,35 @@
+# Hooks que corren automaticamente antes de cada `git commit`.
+# Si alguno falla o modifica archivos, el commit se cancela: revisa, `git add .` y repite.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace # quita espacios al final de las lineas
+      - id: end-of-file-fixer # cada archivo termina con un salto de linea
+      - id: check-yaml # valida la sintaxis de los .yaml
+      - id: check-toml # valida la sintaxis de los .toml
+      - id: check-added-large-files # frena archivos > 1 MB (datos/modelos van a DVC)
+        args: ["--maxkb=1000"]
+      - id: detect-private-key # frena llaves privadas pegadas por error
+
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout # borra las salidas de los notebooks antes de commitear
+
+  # Ruff corre desde el entorno del proyecto (`uv run`), asi usa EXACTAMENTE
+  # la version fijada en uv.lock y no puede discrepar de la que usas a mano.
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: ruff (lint)
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+      - id: ruff-format
+        name: ruff (format)
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
