@@ -1,0 +1,4 @@
+[core]
+    remote = almacen_local
+['remote "almacen_local"']
+    url = F:\Documentos\DiplomadoIAITAM\Modulo1\dvc-remote

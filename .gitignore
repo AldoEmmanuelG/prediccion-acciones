@@ -21,6 +21,10 @@ data/*
 !data/.gitkeep
 models/*
 !models/.gitkeep
+# Los punteros de DVC (archivos .dvc) SI se versionan: son texto pequeno que
+# apunta a los datos y modelos reales, que viven en el remote de DVC.
+!data/*.dvc
+!models/*.dvc
 *.pkl
 *.joblib
 *.pt
