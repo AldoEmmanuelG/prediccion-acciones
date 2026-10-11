@@ -1,0 +1,41 @@
+# --- Entornos y caches de Python ---
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# --- Secretos: NUNCA al repositorio (solo se versiona .env.example) ---
+.env
+.env.*
+!.env.example
+
+# --- Datos y modelos: los versiona DVC, no Git ---
+# Se conserva solo el .gitkeep para que la carpeta exista.
+data/*
+!data/.gitkeep
+models/*
+!models/.gitkeep
+*.pkl
+*.joblib
+*.pt
+*.pth
+*.h5
+
+# --- Artefactos de MLflow y cobertura ---
+mlruns/
+mlartifacts/
+mlflow.db
+.coverage
+htmlcov/
+
+# --- Sistema operativo y editores ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,32 @@
+# Lo que NO debe entrar a la imagen de Docker (la mantiene pequena y segura).
+
+# Control de versiones y herramientas de desarrollo
+.git/
+.gitignore
+.dvc/
+.pre-commit-config.yaml
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Entorno local (la imagen instala sus propias dependencias desde uv.lock)
+.venv/
+__pycache__/
+*.py[cod]
+
+# Secretos: se pasan al correr el contenedor, nunca se copian
+.env
+.env.*
+!.env.example
+
+# Datos crudos, notebooks, pruebas y artefactos de experimentos
+data/
+notebooks/
+tests/
+mlruns/
+mlartifacts/
+mlflow.db
+.coverage
+htmlcov/
+
+# OJO: models/ NO se excluye, porque la imagen necesita el modelo ya entrenado.

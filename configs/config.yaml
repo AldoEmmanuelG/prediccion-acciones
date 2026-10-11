@@ -1,0 +1,39 @@
+# Configuracion del proyecto: aqui viven hiperparametros, rutas y parametros del
+# modelo. El codigo en src/ los LEE de este archivo; no hay valores fijos en las funciones.
+# Es un primer borrador: se ajusta conforme se construye cada modulo.
+
+rutas:
+  datos_crudos: data/raw
+  datos_procesados: data/processed
+  modelos: models
+  mlflow_experimento: prediccion-acciones
+
+datos:
+  tickers: [AMZN, NVDA, META]
+  fecha_inicio: "2015-01-01"
+  horizonte_dias: 1 # se predice la direccion del cierre de t+1
+
+features:
+  ventanas_retorno: [1, 2, 5, 10] # rezagos del retorno diario
+  ventanas_rolling: [5, 10, 20] # media y desviacion movil
+  rsi_periodo: 14
+
+validacion:
+  n_splits: 5 # pliegues de TimeSeriesSplit
+  gap_dias: 5 # hueco entre entrenamiento y validacion
+  meses_holdout: 6 # ultimos meses que NO se tocan hasta el final
+  semilla: 42
+
+modelos:
+  logistica:
+    C: [0.1, 1.0, 10.0] # rejilla para GridSearchCV
+  boosting:
+    max_depth: [3, 5]
+    learning_rate: [0.03, 0.1]
+  pytorch:
+    capas_ocultas: [32, 16]
+    dropout: 0.2
+    learning_rate: 0.001
+    batch_size: 64
+    epocas_max: 50
+    paciencia: 5 # early stopping
