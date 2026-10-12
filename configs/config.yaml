@@ -9,7 +9,10 @@ rutas:
   mlflow_experimento: prediccion-acciones
 
 datos:
-  tickers: [AMZN, NVDA, META]
+  # Objetivo: acciones que el modelo predice y que aparecen en el menu de la app.
+  tickers_objetivo: [AMD, ORCL, IT, IBM, OSIS, LMT, KOF, HUM, ANF, LII]
+  # Contexto: NO se predicen; su retorno del dia entra como caracteristica extra.
+  tickers_contexto: [SPY, NVDA]
   fecha_inicio: "2015-01-01"
   horizonte_dias: 1 # se predice la direccion del cierre de t+1
 
@@ -17,23 +20,27 @@ features:
   ventanas_retorno: [1, 2, 5, 10] # rezagos del retorno diario
   ventanas_rolling: [5, 10, 20] # media y desviacion movil
   rsi_periodo: 14
+  ventanas_contexto: [1, 5] # retornos de SPY y NVDA usados como contexto
 
 validacion:
   n_splits: 5 # pliegues de TimeSeriesSplit
   gap_dias: 5 # hueco entre entrenamiento y validacion
-  meses_holdout: 6 # ultimos meses que NO se tocan hasta el final
+  fecha_corte: "2026-09-30" # ultimo dia de entrenamiento; despues es prueba hacia adelante
+  meses_holdout: 6 # meses de holdout, hacia atras desde fecha_corte
   semilla: 42
 
 modelos:
   logistica:
-    C: [0.1, 1.0, 10.0] # rejilla para GridSearchCV
+    C: [0.001, 0.01, 0.1, 1.0, 10.0] # rejilla para GridSearchCV
   boosting:
-    max_depth: [3, 5]
-    learning_rate: [0.03, 0.1]
+    max_depth: [2, 3, 4, 6]
+    learning_rate: [0.01, 0.03, 0.1]
   pytorch:
     capas_ocultas: [32, 16]
     dropout: 0.2
     learning_rate: 0.001
     batch_size: 64
     epocas_max: 50
-    paciencia: 5 # early stopping
+    paciencia: 10 # early stopping sobre el AUC de validacion
+    weight_decay: 0.0001 # regularizacion L2 de Adam
+    fraccion_validacion: 0.15 # parte final del train para early stopping
