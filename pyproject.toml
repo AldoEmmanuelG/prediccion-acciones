@@ -44,6 +44,17 @@ tracking = [
 # `uv sync` instala ambos grupos por defecto en tu computadora.
 default-groups = ["dev", "tracking"]
 
+# En Linux (la imagen de Docker) torch se instala desde el indice de PyTorch para CPU:
+# la version de PyPI trae soporte de GPU (varios GB) que la app no necesita.
+# En Windows y macOS, PyPI ya ofrece torch solo para CPU, asi que no cambia nada.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
