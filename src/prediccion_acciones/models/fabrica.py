@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 # Importar los modulos con modelos los registra (efecto del decorador).
-from prediccion_acciones.models import sklearn_modelo  # noqa: F401
+from prediccion_acciones.models import pytorch_modelo, sklearn_modelo  # noqa: F401
 from prediccion_acciones.models.base import (
     BaseModel,
     ErrorModelo,

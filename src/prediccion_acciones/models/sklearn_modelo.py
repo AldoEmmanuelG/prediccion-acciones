@@ -54,7 +54,9 @@ class ModeloSklearn(BaseModel):
         self.nombre = nombre
         self._ajustado = ajustado
 
-    def _ajustar(self, X: pd.DataFrame, y: np.ndarray) -> None:
+    def _ajustar(
+        self, X: pd.DataFrame, y: np.ndarray, fechas: Sequence[Any] | None
+    ) -> None:
         self.estimador.fit(X, y)
 
     def _probabilidad(self, X: pd.DataFrame) -> np.ndarray:
