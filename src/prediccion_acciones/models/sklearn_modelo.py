@@ -76,7 +76,8 @@ class ModeloSklearn(BaseModel):
             "umbral": self.umbral,
             "estimador": self.estimador,
         }
-        joblib.dump(paquete, ruta)
+        with ruta.open("wb") as archivo:
+            joblib.dump(paquete, archivo)
         logger.info("Modelo '%s' guardado en %s", self.nombre, ruta)
 
     @classmethod
@@ -84,7 +85,8 @@ class ModeloSklearn(BaseModel):
         ruta = Path(ruta)
         if not ruta.exists():
             raise FileNotFoundError(f"No existe el modelo guardado: {ruta}")
-        paquete = joblib.load(ruta)
+        with ruta.open("rb") as archivo:
+            paquete = joblib.load(archivo)
         faltan = {"nombre", "columnas", "umbral", "estimador"} - set(paquete)
         if faltan:
             raise ErrorModelo(f"Archivo de modelo incompleto, faltan: {sorted(faltan)}")

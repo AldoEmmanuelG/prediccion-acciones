@@ -148,6 +148,13 @@ class ModeloPytorch(BaseModel):
                     "auc_val": auc_va,
                 }
             )
+            logger.debug(
+                "epoca %2d | train %.4f | val %.4f | auc val %.4f",
+                epoca,
+                suma / n,
+                perdida_va,
+                auc_va,
+            )
             if auc_va > mejor_auc + EPSILON_AUC:
                 mejor_auc, mejor_epoca, sin_mejora = auc_va, epoca, 0
                 mejor_estado = copy.deepcopy(red.state_dict())
@@ -209,7 +216,8 @@ class ModeloPytorch(BaseModel):
             "epoca_mejor": self.epoca_mejor,
             "auc_validacion": self.auc_validacion,
         }
-        torch.save(paquete, ruta)
+        with ruta.open("wb") as archivo:
+            torch.save(paquete, archivo)
         logger.info("Modelo '%s' guardado en %s", self.nombre, ruta)
 
     @classmethod
@@ -218,7 +226,8 @@ class ModeloPytorch(BaseModel):
         if not ruta.exists():
             raise FileNotFoundError(f"No existe el modelo guardado: {ruta}")
         # weights_only=True: solo acepta tensores y tipos basicos, nunca codigo.
-        p = torch.load(ruta, weights_only=True, map_location="cpu")
+        with ruta.open("rb") as archivo:
+            p = torch.load(archivo, weights_only=True, map_location="cpu")
         hiper = dict(p["hiper"])
         hiper["capas_ocultas"] = tuple(hiper["capas_ocultas"])
         modelo = cls(
