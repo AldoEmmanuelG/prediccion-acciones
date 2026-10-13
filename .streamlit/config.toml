@@ -1,0 +1,14 @@
+# Tema oscuro fijo: las graficas de Matplotlib estan pensadas para este fondo.
+[theme]
+base = "dark"
+primaryColor = "#4fd1c5"
+backgroundColor = "#0f1719"
+secondaryBackgroundColor = "#172225"
+textColor = "#e5eef0"
+
+[client]
+# Oculta el boton "Deploy" y deja solo el menu basico.
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
