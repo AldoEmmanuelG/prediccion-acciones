@@ -111,3 +111,11 @@ def test_sin_columnas_o_con_umbral_invalido_falla():
     modelo = crear_modelo("logistica", COLUMNAS)
     with pytest.raises(ValueError):
         ModeloSklearn(COLUMNAS, modelo.estimador, "x", umbral=1.5)
+
+
+def test_fit_acepta_fechas_y_valida_su_largo(datos):
+    X, y = datos
+    fechas = pd.bdate_range("2024-01-01", periods=len(X)).to_numpy()
+    crear_modelo("logistica", COLUMNAS).fit(X, y, fechas=fechas)
+    with pytest.raises(ValueError, match="fechas"):
+        crear_modelo("logistica", COLUMNAS).fit(X, y, fechas=fechas[:-1])

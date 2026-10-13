@@ -26,3 +26,24 @@ def splits_por_fecha(
         va = np.flatnonzero(np.isin(fechas, unicas[i_va]))
         salida.append((tr, va))
     return salida
+
+
+def dividir_por_fecha(
+    fechas_fila: pd.Series | np.ndarray, fraccion_val: float, gap: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Separa las ultimas fechas como validacion, dejando `gap` dias de hueco.
+
+    Sirve para el early stopping de la red: la validacion siempre es posterior al
+    entrenamiento. Devuelve indices de filas (entrenamiento, validacion).
+    """
+    if not 0.0 < fraccion_val < 1.0:
+        raise ValueError("fraccion_val debe estar entre 0 y 1")
+    fechas = np.asarray(fechas_fila)
+    unicas = np.sort(pd.unique(fechas))
+    n_val = int(np.ceil(len(unicas) * fraccion_val))
+    n_train = len(unicas) - n_val - gap
+    if n_train < 1:
+        raise ValueError("No hay fechas suficientes para entrenar y validar")
+    idx_train = np.flatnonzero(np.isin(fechas, unicas[:n_train]))
+    idx_val = np.flatnonzero(np.isin(fechas, unicas[-n_val:]))
+    return idx_train, idx_val

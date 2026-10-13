@@ -15,7 +15,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 
 import numpy as np
 import pandas as pd
@@ -41,12 +41,23 @@ class BaseModel(ABC):
 
     # --- Interfaz publica (plantilla): validaciones comunes ---
 
-    def fit(self, X: pd.DataFrame, y: Sequence[int] | np.ndarray) -> Self:
-        """Entrena con las columnas del modelo, en el orden fijado al crearlo."""
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y: Sequence[int] | np.ndarray,
+        fechas: Sequence[Any] | np.ndarray | None = None,
+    ) -> Self:
+        """Entrena con las columnas del modelo, en el orden fijado al crearlo.
+
+        `fechas` (una por fila) es opcional: la usan los modelos que separan una
+        parte del entrenamiento por tiempo, como la red neuronal.
+        """
         etiquetas = np.asarray(y)
         if len(etiquetas) != len(X):
             raise ValueError("X e y deben tener el mismo numero de filas")
-        self._ajustar(self._seleccionar(X), etiquetas)
+        if fechas is not None and len(fechas) != len(X):
+            raise ValueError("fechas y X deben tener el mismo numero de filas")
+        self._ajustar(self._seleccionar(X), etiquetas, fechas)
         self._ajustado = True
         return self
 
@@ -63,7 +74,9 @@ class BaseModel(ABC):
     # --- Lo que cada modelo concreto implementa ---
 
     @abstractmethod
-    def _ajustar(self, X: pd.DataFrame, y: np.ndarray) -> None:
+    def _ajustar(
+        self, X: pd.DataFrame, y: np.ndarray, fechas: Sequence[Any] | None
+    ) -> None:
         """Entrena con `X` que ya trae solo las columnas del modelo."""
 
     @abstractmethod
