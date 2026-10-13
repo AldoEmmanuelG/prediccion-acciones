@@ -129,3 +129,11 @@ def test_la_fabrica_crea_el_modelo_pytorch():
 def test_la_fabrica_exige_los_parametros():
     with pytest.raises(ErrorModelo, match="params"):
         crear_modelo("pytorch", COLUMNAS)
+
+
+def test_registra_las_metricas_de_cada_epoca(datos, caplog):
+    X, y, fechas = datos
+    with caplog.at_level("DEBUG", logger="prediccion_acciones.models.pytorch_modelo"):
+        modelo = _modelo().fit(X, y, fechas=fechas)
+    mensajes = [r.getMessage() for r in caplog.records if "auc val" in r.getMessage()]
+    assert len(mensajes) == len(modelo.historia)
