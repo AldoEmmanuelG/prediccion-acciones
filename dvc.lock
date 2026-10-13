@@ -1,0 +1,44 @@
+schema: '2.0'
+stages:
+  entrenar:
+    cmd: python -m prediccion_acciones.entrenamiento
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 4c6c939dad9cc7b2d9a439d8baa6ee2b
+      size: 1771
+    - path: data/raw
+      hash: md5
+      md5: 5336b8317519effaa535f097867a2abc.dir
+      size: 442812
+      nfiles: 1
+    - path: src/prediccion_acciones
+      hash: md5
+      md5: a4bfb86321a1347e9471fcffb124d684.dir
+      size: 93605
+      nfiles: 27
+    outs:
+    - path: models/boosting.joblib
+      hash: md5
+      md5: 5027f356b68c118b3a12aca2e4f96ad2
+      size: 87762
+    - path: models/logistica.joblib
+      hash: md5
+      md5: 248c81d87270c079f5e625f7b0aca60b
+      size: 3150
+    - path: models/metricas.json
+      hash: md5
+      md5: 3dc8ca2aeda789df1311857511a52c9c
+      size: 3106
+    - path: models/precios_app.csv
+      hash: md5
+      md5: f2aa76fccfde6eb2f91381f50b5058cb
+      size: 1296255
+    - path: models/prueba_adelante.csv
+      hash: md5
+      md5: 6fed4d96f5268af95c4b53bcd931fa5d
+      size: 5568
+    - path: models/pytorch.pt
+      hash: md5
+      md5: c266fd7c0e5696399e52ebc67e574a2b
+      size: 7821
