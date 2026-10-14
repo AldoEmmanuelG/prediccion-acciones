@@ -27,8 +27,10 @@ RUN uv sync --frozen --no-default-groups
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-# No correr como root dentro del contenedor.
-RUN useradd --create-home app && chown -R app:app /app
+# No correr como root dentro del contenedor. No se hace chown de /app: el usuario
+# solo necesita LEER el codigo y el entorno, y cambiar el dueno de miles de archivos
+# duplica la capa (mas tamano y minutos de espera en cada construccion).
+RUN useradd --create-home app
 USER app
 
 EXPOSE 8501
