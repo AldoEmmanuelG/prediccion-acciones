@@ -124,6 +124,8 @@ def _pestana_modelos(art: servicio.Artefactos) -> None:
             "AUC validación": tabla["auc_cv"],
             "AUC holdout": tabla["auc_holdout"],
             "AUC hacia adelante": tabla["auc_adelante"],
+            "F1 validación": tabla["f1_cv"],
+            "F1 holdout": tabla["f1_holdout"],
             "Filas hacia adelante": tabla["n_adelante"],
         }
     )
@@ -136,6 +138,8 @@ def _pestana_modelos(art: servicio.Artefactos) -> None:
                 format="%.4f", min_value=0, max_value=0.6
             ),
             "AUC hacia adelante": st.column_config.NumberColumn(format="%.4f"),
+            "F1 validación": st.column_config.NumberColumn(format="%.3f"),
+            "F1 holdout": st.column_config.NumberColumn(format="%.3f"),
         },
     )
     st.caption(
