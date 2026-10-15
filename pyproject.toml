@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prediccion-acciones"
 version = "0.1.0"
-description = "Pipeline de ML de punta a punta: prediccion de la direccion diaria de acciones, servido con Streamlit y Docker."
+description = "Pipeline de ML de punta a punta: prediccion de la direccion diaria de acciones, servido con FastAPI y Docker."
 readme = "README.md"
 # Rango cerrado en 3.12: uv elige solo esa version, sin necesidad de .python-version.
 requires-python = ">=3.12,<3.13"
@@ -19,7 +19,8 @@ dependencies = [
     "yfinance>=0.2.40,<1",
     "pandera[pandas]>=0.20,<1",
     "matplotlib>=3.8,<4",
-    "streamlit>=1.35,<2",
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
     "joblib>=1.3,<2",
     "pyyaml>=6,<7",
     "python-dotenv>=1,<2",
@@ -34,6 +35,11 @@ dev = [
     "ruff>=0.16,<1",
     "pre-commit>=3.7,<5",
     "ipykernel>=6.29,<7",
+    "httpx>=0.27,<1", # cliente de pruebas de FastAPI (TestClient)
+]
+# Interfaz web opcional (no entra a la imagen de Docker): `streamlit run ...`
+web = [
+    "streamlit>=1.35,<2",
 ]
 tracking = [
     "mlflow>=2.14,<4",
@@ -42,7 +48,7 @@ tracking = [
 
 [tool.uv]
 # `uv sync` instala ambos grupos por defecto en tu computadora.
-default-groups = ["dev", "tracking"]
+default-groups = ["dev", "tracking", "web"]
 
 # En Linux (la imagen de Docker) torch se instala desde el indice de PyTorch para CPU:
 # la version de PyPI trae soporte de GPU (varios GB) que la app no necesita.

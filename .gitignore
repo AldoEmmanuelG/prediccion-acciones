@@ -15,21 +15,27 @@ dist/
 .env.*
 !.env.example
 
-# --- Datos y modelos: los versiona DVC, no Git ---
+# --- Datos: los versiona DVC, no Git ---
 # Se conserva solo el .gitkeep para que la carpeta exista.
 data/*
 !data/.gitkeep
-models/*
-!models/.gitkeep
 # Los punteros de DVC (archivos .dvc) SI se versionan: son texto pequeno que
-# apunta a los datos y modelos reales, que viven en el remote de DVC.
+# apunta a los datos reales, que viven en el remote de DVC.
 !data/*.dvc
-!models/*.dvc
+
+# --- Modelos: SI van en Git ---
+# Pesan menos de 100 MB y la imagen de Docker los necesita adentro, asi que
+# `docker build` funciona despues de clonar, sin pasos extra. Los formatos
+# genericos siguen ignorados; solo se permiten los dos que usa el proyecto.
 *.pkl
-*.joblib
-*.pt
 *.pth
 *.h5
+*.joblib
+*.pt
+!models/*.joblib
+!models/*.pt
+# Checkpoint de exploracion del notebook 03: no es un entregable.
+models/mlp_exploracion.pt
 
 # --- Artefactos de MLflow y cobertura ---
 mlruns/

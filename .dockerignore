@@ -23,6 +23,7 @@ __pycache__/
 data/
 notebooks/
 tests/
+reports/
 mlruns/
 mlartifacts/
 mlflow.db
