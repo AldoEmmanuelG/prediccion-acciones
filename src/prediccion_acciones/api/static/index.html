@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Predicción de acciones</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --ink: #151a22;
+    --muted: #5a6473;
+    --line: #e2e6ec;
+    --track: #e8ebf1;
+    --accent: #2c56d6;
+    --on-accent: #ffffff;
+    --up: #0b8458;
+    --up-bg: #e3f5ed;
+    --down: #b8430b;
+    --down-bg: #fdeadf;
+    --sma20: #a16207;
+    --sma50: #7c3aed;
+    --shadow: 0 1px 2px rgba(20, 26, 34, 0.06), 0 4px 16px rgba(20, 26, 34, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1218;
+      --card: #171d26;
+      --ink: #e9ecf1;
+      --muted: #98a2b3;
+      --line: #263040;
+      --track: #232c39;
+      --accent: #7ea4ff;
+      --on-accent: #0e1218;
+      --up: #3fd09b;
+      --up-bg: #12302a;
+      --down: #ff9b66;
+      --down-bg: #3a2418;
+      --sma20: #facc15;
+      --sma50: #c4b5fd;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .pagina { max-width: 960px; margin: 0 auto; padding: 32px 16px 48px; }
+  header h1 { margin: 0 0 6px; font-size: 1.75rem; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); max-width: 62ch; }
+  .estado {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 16px; padding: 6px 12px;
+    border: 1px solid var(--line); border-radius: 999px;
+    background: var(--card); color: var(--muted); font-size: 0.85rem;
+  }
+  .punto { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .estado.ok .punto { background: var(--up); }
+  .estado.mal .punto { background: var(--down); }
+
+  .tarjeta {
+    margin-top: 20px; padding: 20px;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow);
+  }
+  h2 { margin: 0 0 4px; font-size: 1.1rem; }
+  h3 { margin: 22px 0 8px; font-size: 1rem; }
+  .sub { margin: 0 0 14px; color: var(--muted); font-size: 0.88rem; }
+
+  .controles { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-end; }
+  .campo label, .campo .etiqueta {
+    display: block; margin-bottom: 6px; font-size: 0.8rem; color: var(--muted);
+  }
+  select {
+    min-width: 150px; padding: 9px 12px; font: inherit; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .segmentos { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .segmentos button {
+    padding: 9px 16px; font: inherit; color: var(--ink); cursor: pointer;
+    background: var(--bg); border: 0; border-right: 1px solid var(--line);
+  }
+  .segmentos button:last-child { border-right: 0; }
+  .segmentos button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  .opcion { display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; }
+  select:focus-visible, button:focus-visible, tr:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  .pestanas { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 20px; border-bottom: 1px solid var(--line); }
+  .pestanas button {
+    padding: 10px 16px; font: inherit; color: var(--muted); cursor: pointer;
+    background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -1px;
+  }
+  .pestanas button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .pestanas .corto { display: none; }
+  .panel { margin-top: 0; }
+  .cargando { color: var(--muted); padding: 24px 0; }
+
+  .veredicto { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pildora {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    padding: 4px 12px; border-radius: 999px; font-weight: 600; font-size: 0.95rem;
+  }
+  .pildora.sube { color: var(--up); background: var(--up-bg); }
+  .pildora.baja { color: var(--down); background: var(--down-bg); }
+  .veredicto .grande { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; }
+  .veredicto .nota-modelo { color: var(--muted); }
+
+  .barra { position: relative; height: 12px; margin: 22px 0 8px; background: var(--track); border-radius: 999px; }
+  .barra .relleno { height: 100%; border-radius: 999px; background: var(--accent); }
+  .barra .umbral { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
+  .leyenda { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.8rem; }
+  .datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 16px; }
+  .dato { padding: 10px 12px; background: var(--bg); border-radius: 10px; }
+  .dato span { display: block; color: var(--muted); font-size: 0.78rem; }
+  .dato strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+  .dato small { font-size: 0.8rem; font-weight: 500; }
+  .sube-txt { color: var(--up); }
+  .baja-txt { color: var(--down); }
+  .error { color: var(--down); background: var(--down-bg); padding: 10px 12px; border-radius: 10px; }
+
+  .tabla-caja { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 0.78rem; font-weight: 500; color: var(--muted); padding: 0 8px 8px; white-space: nowrap; }
+  td { padding: 8px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  th.num, td.num { text-align: right; }
+  tbody tr.clic { cursor: pointer; }
+  tbody tr.clic:hover { background: var(--bg); }
+  tbody tr.activa { background: var(--bg); }
+  tbody tr.activa td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  tbody tr.piso td { color: var(--muted); }
+  td.ticker { font-weight: 600; }
+  .mini { position: relative; height: 8px; min-width: 110px; background: var(--track); border-radius: 999px; }
+  .mini .relleno { height: 100%; border-radius: 999px; background: var(--accent); opacity: 0.85; }
+  .mini .umbral { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+  .nota { margin: 12px 0 0; color: var(--muted); font-size: 0.82rem; }
+
+  .titulo-grafica { margin: 22px 0 4px; font-size: 1rem; font-weight: 600; }
+  .leyenda-grafica { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; color: var(--muted); font-size: 0.82rem; }
+  .leyenda-grafica span { display: inline-flex; align-items: center; gap: 6px; }
+  .muestra { width: 18px; height: 0; border-top: 2px solid var(--accent); }
+  .muestra.s20 { border-top: 2px dashed var(--sma20); }
+  .muestra.s50 { border-top: 2px dotted var(--sma50); }
+  .muestra.azar { border-top: 2px dashed var(--ink); }
+  .muestra.banda { height: 10px; border: 0; background: var(--accent); opacity: 0.18; }
+  .tri { font-size: 0.8rem; }
+  .tri.sube { color: var(--up); }
+  .tri.baja { color: var(--down); }
+  .grafica-scroll { overflow-x: auto; }
+  .grafica-caja { position: relative; min-width: 560px; }
+  svg.grafica { display: block; width: 100%; height: auto; }
+  svg .rejilla { stroke: var(--line); stroke-width: 1; }
+  svg .eje { fill: var(--muted); font-size: 12px; }
+  svg .titulo-eje { fill: var(--muted); font-size: 12px; }
+  svg .nombre-modelo { fill: var(--ink); font-size: 13px; }
+  svg .l-cierre { fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; }
+  svg .l-sma20 { fill: none; stroke: var(--sma20); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  svg .l-sma50 { fill: none; stroke: var(--sma50); stroke-width: 1.8; stroke-dasharray: 2 4; }
+  svg .tri-sube { fill: var(--up); stroke: var(--card); stroke-width: 1.2; }
+  svg .tri-baja { fill: var(--down); stroke: var(--card); stroke-width: 1.2; }
+  svg .cruz { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  svg .punto-cruz { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
+  svg .barra-modelo { fill: var(--accent); }
+  svg .barra-piso { fill: var(--muted); }
+  svg .valor-barra { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
+  svg .banda { fill: var(--accent); opacity: 0.16; }
+  svg .azar { stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 6 4; }
+  .tip {
+    position: absolute; pointer-events: none; transform: translate(-50%, -100%);
+    padding: 6px 10px; background: var(--ink); color: var(--bg); border-radius: 8px;
+    font-size: 0.78rem; line-height: 1.35; white-space: nowrap; z-index: 2;
+  }
+  .dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .explica p { margin: 0 0 10px; font-size: 0.92rem; }
+  .lectura p { margin: 0 0 10px; }
+  .lectura .titular { font-weight: 600; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 0.85rem; }
+  footer a { color: var(--accent); }
+  @media (max-width: 700px) {
+    .dos-col { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    header h1 { font-size: 1.45rem; }
+    .veredicto .grande { font-size: 1.8rem; }
+    .oculto-movil { display: none; }
+    .tarjeta { padding: 16px; }
+    .pestanas { flex-wrap: nowrap; }
+    .pestanas button { padding: 10px 12px; white-space: nowrap; }
+    .pestanas .largo { display: none; }
+    .pestanas .corto { display: inline; }
+  }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <header>
+    <h1>Predicción diaria de acciones</h1>
+    <p>¿Sube o baja la acción en el siguiente cierre? Probabilidad estimada por una regresión logística o una red neuronal en PyTorch, para 10 acciones.</p>
+    <div class="estado" id="estado" role="status"><span class="punto"></span><span id="estado-texto">Conectando con la API…</span></div>
+  </header>
+
+  <section class="tarjeta" aria-label="Controles">
+    <div class="controles">
+      <div class="campo">
+        <label for="ticker">Acción</label>
+        <select id="ticker" disabled></select>
+      </div>
+      <div class="campo">
+        <span class="etiqueta" id="et-modelo">Modelo</span>
+        <div class="segmentos" id="modelos" role="group" aria-labelledby="et-modelo"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="pestanas" role="tablist" id="pestanas">
+    <button role="tab" type="button" data-p="resumen" aria-selected="true"><span class="largo">Resumen de las 10</span><span class="corto">Resumen</span></button>
+    <button role="tab" type="button" data-p="detalle" aria-selected="false"><span class="largo">Detalle por acción</span><span class="corto">Detalle</span></button>
+    <button role="tab" type="button" data-p="modelos" aria-selected="false"><span class="largo">Acerca del modelo</span><span class="corto">Modelos</span></button>
+  </div>
+  <section class="tarjeta panel" id="panel" role="tabpanel" aria-live="polite" style="margin-top:0;border-top-left-radius:0;border-top-right-radius:0"></section>
+
+  <footer>
+    <p>Proyecto académico, no es asesoría financiera. Con estas características los modelos rinden prácticamente como el azar. Documentación de la API en <a href="/docs">/docs</a>.</p>
+  </footer>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const NOMBRES = {
+    logistica: "Regresión logística",
+    pytorch: "MLP (PyTorch)",
+    dummy: "Siempre sube (piso)",
+  };
+  const NS = "http://www.w3.org/2000/svg";
+  const estado = {
+    ticker: null, modelo: null, tickers: [], modelos: [],
+    pestana: "resumen", dias: 60, sma20: true, sma50: false, ronda: 0,
+  };
+
+  /* ---------- utilidades ---------- */
+  const pct = (x, d = 1) => (x * 100).toFixed(d) + " %";
+  const num = (x, d = 2) =>
+    x.toLocaleString("es-MX", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const fecha = (iso) => { const [a, m, d] = iso.split("-"); return d + "/" + m + "/" + a; };
+  const fechaCorta = (iso) => { const [a, m, d] = iso.split("-"); return d + "/" + m + "/" + a.slice(2); };
+  const nombreModelo = (k) => NOMBRES[k] || k;
+
+  function el(etiqueta, clase, texto) {
+    const nodo = document.createElement(etiqueta);
+    if (clase) nodo.className = clase;
+    if (texto !== undefined) nodo.textContent = texto;
+    return nodo;
+  }
+  function s(etiqueta, atributos, hijos) {
+    const nodo = document.createElementNS(NS, etiqueta);
+    for (const [k, v] of Object.entries(atributos || {})) nodo.setAttribute(k, v);
+    if (hijos) nodo.append(...hijos);
+    return nodo;
+  }
+  function texto(x, y, contenido, atributos) {
+    const nodo = s("text", Object.assign({ x, y }, atributos));
+    nodo.textContent = contenido;
+    return nodo;
+  }
+  function celda(contenido, clase) {
+    const td = el("td", clase);
+    if (contenido instanceof Node) td.append(contenido); else td.textContent = contenido;
+    return td;
+  }
+  function cabecera(columnas) {
+    const thead = el("thead");
+    const fila = el("tr");
+    for (const [t, c] of columnas) fila.append(el("th", c, t));
+    thead.append(fila);
+    return thead;
+  }
+  function pildora(sube) {
+    return el("span", "pildora " + (sube ? "sube" : "baja"), sube ? "▲ Sube" : "▼ Baja");
+  }
+  function tarjetaDato(titulo, valor, extra, claseExtra) {
+    const d = el("div", "dato");
+    const fuerte = el("strong", "", valor);
+    if (extra) { fuerte.append(" ", el("small", claseExtra || "", extra)); }
+    d.append(el("span", "", titulo), fuerte);
+    return d;
+  }
+
+  async function pedir(ruta, opciones) {
+    const r = await fetch(ruta, opciones);
+    const cuerpo = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const detalle = typeof cuerpo.detail === "string" ? cuerpo.detail : "petición no válida";
+      throw new Error(detalle);
+    }
+    return cuerpo;
+  }
+  const predecir = (ticker, modelo) =>
+    pedir("/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker, modelo }),
+    });
+
+  /* ---------- escalas y ejes ---------- */
+  function ticksLineales(min, max, n) {
+    const paso0 = (max - min) / (n - 1) || 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(paso0)));
+    const f = paso0 / mag;
+    const paso = (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag;
+    const res = [];
+    for (let v = Math.ceil(min / paso) * paso; v <= max + 1e-9; v += paso) res.push(+v.toFixed(10));
+    return res;
+  }
+
+  /* ---------- gráfica de precio ---------- */
+  function graficaPrecio(precios, noVistos, ticker) {
+    const W = 900, H = 380, ML = 62, MR = 16, MT = 14, MB = 58;
+    const n = precios.length;
+    const valores = [];
+    for (const p of precios) {
+      valores.push(p.cierre);
+      if (estado.sma20 && p.sma20 != null) valores.push(p.sma20);
+      if (estado.sma50 && p.sma50 != null) valores.push(p.sma50);
+    }
+    let lo = Math.min(...valores), hi = Math.max(...valores);
+    const holgura = (hi - lo) * 0.07 || 1;
+    lo -= holgura; hi += holgura;
+    const X = (i) => ML + (n === 1 ? 0 : (i * (W - ML - MR)) / (n - 1));
+    const Y = (v) => MT + (1 - (v - lo) / (hi - lo)) * (H - MT - MB);
+
+    const svg = s("svg", {
+      viewBox: "0 0 " + W + " " + H, class: "grafica", role: "img",
+      "aria-label": "Cierre diario de " + ticker + " con medias móviles y predicciones del modelo",
+    });
+    const ticks = ticksLineales(lo, hi, 5);
+    const paso = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
+    const dec = paso >= 1 ? 0 : paso >= 0.1 ? 1 : 2;
+    for (const t of ticks) {
+      svg.append(
+        s("line", { x1: ML, x2: W - MR, y1: Y(t), y2: Y(t), class: "rejilla" }),
+        texto(ML - 8, Y(t) + 4, num(t, dec), { class: "eje", "text-anchor": "end" })
+      );
+    }
+    const k = Math.min(6, n);
+    for (let j = 0; j < k; j++) {
+      const i = Math.round((j * (n - 1)) / (k - 1));
+      // La primera y la última fecha se alinean hacia adentro para que no se corten.
+      const ancla = j === 0 ? "start" : j === k - 1 ? "end" : "middle";
+      svg.append(texto(X(i), H - MB + 18, fechaCorta(precios[i].fecha), { class: "eje", "text-anchor": ancla }));
+    }
+    svg.append(
+      texto((ML + W - MR) / 2, H - 10, "Fecha", { class: "titulo-eje", "text-anchor": "middle" }),
+      texto(16, (MT + H - MB) / 2, "Precio de cierre (USD)", {
+        class: "titulo-eje", "text-anchor": "middle",
+        transform: "rotate(-90 16 " + (MT + H - MB) / 2 + ")",
+      })
+    );
+
+    const camino = (campo) => {
+      let d = "", abierto = false;
+      precios.forEach((p, i) => {
+        const v = p[campo];
+        if (v == null) { abierto = false; return; }
+        d += (abierto ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1);
+        abierto = true;
+      });
+      return d;
+    };
+    if (estado.sma50) svg.append(s("path", { d: camino("sma50"), class: "l-sma50" }));
+    if (estado.sma20) svg.append(s("path", { d: camino("sma20"), class: "l-sma20" }));
+    svg.append(s("path", { d: camino("cierre"), class: "l-cierre" }));
+
+    const indice = new Map(precios.map((p, i) => [p.fecha, i]));
+    const marcas = new Map();
+    for (const d of noVistos) {
+      if (!indice.has(d.fecha)) continue;
+      const i = indice.get(d.fecha);
+      marcas.set(i, d);
+      const x = X(i), y = Y(precios[i].cierre);
+      const sube = d.prediccion === "sube";
+      const pts = sube
+        ? [x + "," + (y - 9), (x - 7) + "," + (y + 4), (x + 7) + "," + (y + 4)]
+        : [x + "," + (y + 9), (x - 7) + "," + (y - 4), (x + 7) + "," + (y - 4)];
+      svg.append(s("polygon", { points: pts.join(" "), class: sube ? "tri-sube" : "tri-baja" }));
+    }
+
+    const cruz = s("line", { y1: MT, y2: H - MB, class: "cruz", visibility: "hidden" });
+    const bolita = s("circle", { r: 4.5, class: "punto-cruz", visibility: "hidden" });
+    const zona = s("rect", { x: ML, y: MT, width: W - ML - MR, height: H - MT - MB, fill: "transparent" });
+    svg.append(cruz, bolita, zona);
+
+    const caja = el("div", "grafica-caja");
+    const tip = el("div", "tip");
+    tip.hidden = true;
+    caja.append(svg, tip);
+    zona.addEventListener("pointermove", (e) => {
+      const r = svg.getBoundingClientRect();
+      const px = ((e.clientX - r.left) * W) / r.width;
+      const i = Math.max(0, Math.min(n - 1, Math.round(((px - ML) / (W - ML - MR)) * (n - 1))));
+      const p = precios[i];
+      cruz.setAttribute("x1", X(i)); cruz.setAttribute("x2", X(i));
+      bolita.setAttribute("cx", X(i)); bolita.setAttribute("cy", Y(p.cierre));
+      cruz.setAttribute("visibility", "visible"); bolita.setAttribute("visibility", "visible");
+      const lineas = [fecha(p.fecha) + " · cierre " + num(p.cierre) + " USD"];
+      if (estado.sma20 && p.sma20 != null) lineas.push("Media 20 días: " + num(p.sma20));
+      if (estado.sma50 && p.sma50 != null) lineas.push("Media 50 días: " + num(p.sma50));
+      const m = marcas.get(i);
+      if (m) {
+        lineas.push("Predijo " + m.prediccion + " (" + pct(m.probabilidad_sube) + "), pasó: " +
+          m.real + (m.acierto ? " ✓" : " ✗"));
+      }
+      tip.replaceChildren(...lineas.map((l) => el("div", "", l)));
+      tip.hidden = false;
+      const rel = X(i) / W;
+      // Cerca de los bordes el recuadro se abre hacia adentro para no cortarse.
+      tip.style.transform = rel > 0.7 ? "translate(-100%, -100%)" : rel < 0.3 ? "translate(0, -100%)" : "translate(-50%, -100%)";
+      tip.style.left = rel * r.width + "px";
+      tip.style.top = (Y(p.cierre) / H) * r.height - 12 + "px";
+    });
+    zona.addEventListener("pointerleave", () => {
+      tip.hidden = true;
+      cruz.setAttribute("visibility", "hidden"); bolita.setAttribute("visibility", "hidden");
+    });
+    const scroll = el("div", "grafica-scroll");
+    scroll.append(caja);
+    return scroll;
+  }
+
+  /* ---------- gráfica de barras de AUC ---------- */
+  function graficaAuc(modelos) {
+    const W = 680, FILA = 50, ML = 170, MR = 24, MT = 10, MB = 52;
+    const H = MT + MB + modelos.length * FILA;
+    const X = (v) => ML + (v / 0.65) * (W - ML - MR);
+    const svg = s("svg", {
+      viewBox: "0 0 " + W + " " + H, class: "grafica", role: "img",
+      "aria-label": "AUC en el holdout de cada modelo frente al azar",
+    });
+    for (let t = 0; t <= 0.6001; t += 0.1) {
+      svg.append(
+        s("line", { x1: X(t), x2: X(t), y1: MT, y2: H - MB, class: "rejilla" }),
+        texto(X(t), H - MB + 18, t.toFixed(1), { class: "eje", "text-anchor": "middle" })
+      );
+    }
+    svg.append(s("rect", { x: X(0.47), y: MT, width: X(0.53) - X(0.47), height: H - MT - MB, class: "banda" }));
+    modelos.forEach((m, i) => {
+      const y = MT + i * FILA + 9;
+      svg.append(
+        texto(ML - 10, y + 17, nombreModelo(m.clave), { class: "nombre-modelo", "text-anchor": "end" }),
+        s("rect", { x: ML, y, width: X(m.auc_holdout) - ML, height: 28, rx: 4, class: m.clave === "dummy" ? "barra-piso" : "barra-modelo" }),
+        texto(X(m.auc_holdout) - 8, y + 18, m.auc_holdout.toFixed(4), { class: "valor-barra", "text-anchor": "end" })
+      );
+    });
+    svg.append(
+      s("line", { x1: X(0.5), x2: X(0.5), y1: MT, y2: H - MB, class: "azar" }),
+      texto((ML + W - MR) / 2, H - 8, "AUC-ROC en holdout", { class: "titulo-eje", "text-anchor": "middle" })
+    );
+    const caja = el("div", "grafica-caja");
+    caja.style.minWidth = "480px";
+    caja.append(svg);
+    const scroll = el("div", "grafica-scroll");
+    scroll.append(caja);
+    return scroll;
+  }
+
+  /* ---------- pestaña: resumen ---------- */
+  async function pestanaResumen(panel, ronda) {
+    const d = await pedir("/resumen?modelo=" + estado.modelo);
+    if (ronda !== estado.ronda) return;
+    const a = d.acciones;
+    const nSube = a.filter((x) => x.prediccion === "sube").length;
+    panel.replaceChildren();
+    panel.append(el("h2", "", "Probabilidad de que cada acción suba en el siguiente cierre"));
+    panel.append(el("p", "sub",
+      "Ordenadas de mayor a menor. Datos hasta el cierre del " + fecha(d.fecha_datos) +
+      "; la predicción es para el cierre del " + fecha(d.fecha_prediccion) +
+      ". Modelo: " + nombreModelo(d.modelo) + "."));
+    const datos = el("div", "datos");
+    datos.append(
+      tarjetaDato("Acciones con señal de subida", nSube + " de " + a.length),
+      tarjetaDato("Probabilidad más alta", a[0].ticker + " " + pct(a[0].probabilidad_sube)),
+      tarjetaDato("Probabilidad más baja", a[a.length - 1].ticker + " " + pct(a[a.length - 1].probabilidad_sube))
+    );
+    panel.append(datos);
+
+    const tabla = el("table");
+    tabla.append(cabecera([["Acción", ""], ["Sector", "oculto-movil"], ["Último cierre (USD)", "num"],
+      ["Cambio 1 día", "num oculto-movil"], ["Probabilidad de subir", ""], ["Valor", "num"], ["Señal", ""]]));
+    const cuerpo = el("tbody");
+    const LO = 0.35, HI = 0.65;
+    for (const f of a) {
+      const fila = el("tr", "clic" + (f.ticker === estado.ticker ? " activa" : ""));
+      fila.tabIndex = 0;
+      const mini = el("div", "mini");
+      const relleno = el("div", "relleno");
+      relleno.style.width = Math.max(0, Math.min(100, ((f.probabilidad_sube - LO) / (HI - LO)) * 100)) + "%";
+      const marca = el("div", "umbral");
+      marca.style.left = ((f.umbral - LO) / (HI - LO)) * 100 + "%";
+      mini.append(relleno, marca);
+      const cambio = el("span", f.cambio_1d >= 0 ? "sube-txt" : "baja-txt", (f.cambio_1d >= 0 ? "+" : "") + num(f.cambio_1d * 100) + " %");
+      fila.append(
+        celda(f.ticker, "ticker"), celda(f.sector, "oculto-movil"), celda(num(f.cierre), "num"),
+        celda(cambio, "num oculto-movil"), celda(mini), celda(pct(f.probabilidad_sube), "num"), celda(pildora(f.prediccion === "sube"))
+      );
+      const elegir = () => { estado.ticker = f.ticker; $("ticker").value = f.ticker; mostrarPestana("detalle"); };
+      fila.addEventListener("click", elegir);
+      fila.addEventListener("keydown", (e) => { if (e.key === "Enter") elegir(); });
+      cuerpo.append(fila);
+    }
+    tabla.append(cuerpo);
+    const caja = el("div", "tabla-caja");
+    caja.append(tabla);
+    panel.append(caja);
+    panel.append(el("p", "nota",
+      "Las barras van de 35 % a 65 %. La línea vertical de cada barra es el umbral del modelo: por encima dice «sube», por debajo «baja». Haz clic en una fila para ver su detalle."));
+  }
+
+  /* ---------- pestaña: detalle ---------- */
+  function tarjetaPrediccion(p, fila) {
+    const caja = el("div");
+    const sube = p.prediccion === "sube";
+    const ver = el("div", "veredicto");
+    ver.append(el("span", "grande", p.ticker), pildora(sube),
+      el("span", "nota-modelo", "según el modelo " + nombreModelo(p.modelo)));
+    const barra = el("div", "barra");
+    const relleno = el("div", "relleno");
+    relleno.style.width = p.probabilidad_sube * 100 + "%";
+    const marca = el("div", "umbral");
+    marca.style.left = p.umbral * 100 + "%";
+    marca.title = "Umbral: " + pct(p.umbral);
+    barra.append(relleno, marca);
+    const ley = el("div", "leyenda");
+    ley.append(el("span", "", "0 %"), el("span", "", "probabilidad de que suba (la línea es el umbral)"), el("span", "", "100 %"));
+    const datos = el("div", "datos");
+    const cambio = fila ? (fila.cambio_1d >= 0 ? "+" : "") + num(fila.cambio_1d * 100) + " % en el día" : "";
+    datos.append(
+      tarjetaDato("Probabilidad de que suba", pct(p.probabilidad_sube)),
+      tarjetaDato("Umbral del modelo", pct(p.umbral)),
+      tarjetaDato("Último cierre (" + fecha(p.fecha_datos) + ")", num(p.cierre) + " USD", cambio,
+        fila && fila.cambio_1d >= 0 ? "sube-txt" : "baja-txt")
+    );
+    caja.append(ver, barra, ley, datos);
+    return caja;
+  }
+
+  function controlesDetalle(alCambiarDias, alCambiarMedias) {
+    const fila = el("div", "controles");
+    fila.style.marginTop = "22px";
+    const campo = el("div", "campo");
+    const et = el("label", "", "Historial (días hábiles)");
+    et.htmlFor = "dias";
+    const sel = el("select");
+    sel.id = "dias";
+    for (const d of [30, 60, 120, 250]) sel.append(new Option(d, d, false, d === estado.dias));
+    sel.addEventListener("change", () => { estado.dias = Number(sel.value); alCambiarDias(); });
+    campo.append(et, sel);
+    fila.append(campo);
+    for (const [clave, texto_] of [["sma20", "Media móvil 20 días"], ["sma50", "Media móvil 50 días"]]) {
+      const lab = el("label", "opcion");
+      const caja = el("input");
+      caja.type = "checkbox";
+      caja.checked = estado[clave];
+      caja.addEventListener("change", () => { estado[clave] = caja.checked; alCambiarMedias(); });
+      lab.append(caja, texto_);
+      fila.append(lab);
+    }
+    return fila;
+  }
+
+  async function pestanaDetalle(panel, ronda) {
+    const [p, serie, resumen] = await Promise.all([
+      predecir(estado.ticker, estado.modelo),
+      pedir("/series/" + estado.ticker + "?modelo=" + estado.modelo + "&dias=" + estado.dias),
+      pedir("/resumen?modelo=" + estado.modelo),
+    ]);
+    if (ronda !== estado.ronda) return;
+    dibujarDetalle(panel, { p, serie, fila: resumen.acciones.find((x) => x.ticker === estado.ticker) });
+  }
+
+  function dibujarDetalle(panel, datos) {
+    const { p, serie, fila } = datos;
+    panel.replaceChildren();
+    panel.append(el("h2", "", "Detalle: " + estado.ticker + (fila ? " · " + fila.sector : "")));
+    panel.append(tarjetaPrediccion(p, fila));
+    panel.append(controlesDetalle(() => cargar(), () => dibujarDetalle(panel, datos)));
+
+    panel.append(el("div", "titulo-grafica", estado.ticker + ": cierre diario"));
+    const ley = el("div", "leyenda-grafica");
+    const item = (cls, t) => { const x = el("span"); x.append(el("i", "muestra " + cls), t); return x; };
+    ley.append(item("", "Cierre"));
+    if (estado.sma20) ley.append(item("s20", "Media 20 días"));
+    if (estado.sma50) ley.append(item("s50", "Media 50 días"));
+    const t1 = el("span"); t1.append(el("span", "tri sube", "▲"), " Predijo sube");
+    const t2 = el("span"); t2.append(el("span", "tri baja", "▼"), " Predijo baja");
+    ley.append(t1, t2);
+    panel.append(ley, graficaPrecio(serie.precios, serie.dias_no_vistos, estado.ticker));
+
+    panel.append(el("h3", "", "Cómo le ha ido al modelo en días que no vio"));
+    const dv = serie.dias_no_vistos;
+    if (dv.length === 0) {
+      panel.append(el("p", "sub", "Todavía no hay días posteriores a la fecha de corte."));
+      return;
+    }
+    const aciertos = dv.filter((x) => x.acierto).length;
+    panel.append(el("p", "sub",
+      "Desde el " + fecha(serie.fecha_corte) + " (fecha de corte del entrenamiento) acertó " + aciertos +
+      " de " + dv.length + " días en " + estado.ticker +
+      ". Son muy pocos días para sacar conclusiones; abajo, los 10 más recientes."));
+    const tabla = el("table");
+    tabla.append(cabecera([["Fecha", ""], ["Prob. de subida", ""], ["Predicción", ""], ["Real", ""], ["Acertó", ""]]));
+    const cuerpo = el("tbody");
+    for (const x of dv.slice(-10).reverse()) {
+      const f = el("tr");
+      f.append(
+        celda(fecha(x.fecha)), celda(pct(x.probabilidad_sube)), celda(pildora(x.prediccion === "sube")),
+        celda(x.real === "sube" ? "Subió" : "Bajó"),
+        celda(x.acierto ? "✓ Sí" : "✗ No", x.acierto ? "sube-txt" : "baja-txt")
+      );
+      cuerpo.append(f);
+    }
+    tabla.append(cuerpo);
+    const caja = el("div", "tabla-caja");
+    caja.append(tabla);
+    panel.append(caja);
+  }
+
+  /* ---------- pestaña: acerca del modelo ---------- */
+  function parrafo(titulo, cuerpo) {
+    const p = el("p");
+    p.append(el("strong", "", titulo + " "), cuerpo);
+    return p;
+  }
+
+  async function pestanaModelos(panel, ronda) {
+    const d = await pedir("/modelos");
+    if (ronda !== estado.ronda) return;
+    panel.replaceChildren();
+    panel.append(el("h2", "", "Comparación de modelos"));
+    panel.append(el("p", "sub",
+      "El piso es el modelo que siempre responde «sube». Un modelo solo aporta si lo supera por más que el ruido."));
+
+    const tabla = el("table");
+    tabla.append(cabecera([["Modelo", ""], ["AUC validación", "num"], ["AUC holdout", "num"],
+      ["Exactitud holdout", "num"], ["F1 holdout", "num oculto-movil"], ["AUC hacia adelante", "num oculto-movil"]]));
+    const cuerpo = el("tbody");
+    for (const m of d.modelos) {
+      const f = el("tr", m.clave === "dummy" ? "piso" : "");
+      const adelante = m.auc_adelante == null ? "—" : num(m.auc_adelante, 3) + " (n=" + m.n_adelante + ")";
+      f.append(
+        celda(nombreModelo(m.clave), "ticker"),
+        celda(num(m.auc_validacion, 3) + " ± " + num(m.auc_validacion_std, 3), "num"),
+        celda(num(m.auc_holdout, 3), "num"),
+        celda(m.exactitud_holdout == null ? "—" : pct(m.exactitud_holdout), "num"),
+        celda(num(m.f1_holdout, 3), "num oculto-movil"),
+        celda(adelante, "num oculto-movil")
+      );
+      cuerpo.append(f);
+    }
+    tabla.append(cuerpo);
+    const caja = el("div", "tabla-caja");
+    caja.append(tabla);
+    panel.append(caja);
+    const p = d.periodos;
+    panel.append(el("p", "nota",
+      "Validación = 5 pliegues temporales (promedio ± desviación). Holdout = " + p.holdout[0] + " a " + p.holdout[1] +
+      ", abierto una sola vez. Hacia adelante = días posteriores al corte (" + d.fecha_corte + "). Entrenamiento: " +
+      p.entrenamiento[0] + " a " + p.entrenamiento[1] + "."));
+    if (d.piso_exactitud != null) {
+      panel.append(el("p", "nota",
+        "Piso de exactitud en el holdout: " + pct(d.piso_exactitud) + " (responder siempre «sube»)."));
+    }
+
+    panel.append(el("div", "titulo-grafica", "AUC en el holdout por modelo"));
+    const ley = el("div", "leyenda-grafica");
+    const it = (cls, t) => { const x = el("span"); x.append(el("i", "muestra " + cls), t); return x; };
+    ley.append(it("banda", "Zona de ruido (± 0.03)"), it("azar", "Azar = 0.50"));
+    panel.append(ley, graficaAuc(d.modelos));
+
+    const dos = el("div", "dos-col");
+    dos.style.marginTop = "22px";
+    const izq = el("div", "explica");
+    izq.append(el("h3", "", "Qué significan las métricas"));
+    izq.firstChild.style.marginTop = "0";
+    izq.append(
+      parrafo("AUC.", "Si tomo un día que subió y uno que bajó, ¿con qué frecuencia el modelo le da mayor probabilidad al que subió? 0.50 es lanzar una moneda; 1.00 sería perfecto."),
+      parrafo("Exactitud.", "Proporción de días acertados. Se compara contra el piso: decir siempre «sube» ya acierta alrededor de la mitad."),
+      parrafo("F1.", "Equilibrio entre acertar los días de subida y no dar falsas alarmas. Engaña aquí: como cerca de 53 % de los días suben, decir siempre «sube» ya da un F1 cercano a 0.69."),
+      parrafo("Holdout.", "Seis meses que ningún modelo vio al entrenar ni al elegir hiperparámetros. Es el examen final y se abre una sola vez."),
+      parrafo("Hacia adelante.", "Días posteriores al corte. Son pocos, así que su AUC oscila mucho y no demuestra nada por sí solo.")
+    );
+    const der = el("div", "lectura");
+    der.append(el("h3", "", "Lectura honesta del resultado"));
+    der.firstChild.style.marginTop = "0";
+    der.append(
+      el("p", "titular", "Con estas 13 variables de precio y volumen, ningún modelo predice mejor que el azar."),
+      el("p", "", "En validación los modelos empatan con el piso en un AUC cercano a 0.51. En el holdout, con alrededor de 1,300 filas, el margen de error es de ±0.03: los resultados quedan en o apenas debajo de esa zona de ruido, sin ser una señal real. Los valores más altos de la prueba hacia adelante salen de muy pocos días y no se sostienen en el holdout."),
+      el("p", "", "Esto es lo esperado: la dirección de un día en acciones líquidas es casi impredecible con indicadores técnicos. Por eso se reporta el piso junto a cada modelo: el valor del proyecto está en un proceso sin fuga de información, no en una señal de trading.")
+    );
+    dos.append(izq, der);
+    panel.append(dos);
+  }
+
+  /* ---------- control de pestañas ---------- */
+  function mostrarError(panel, e) {
+    panel.replaceChildren(el("div", "error", "No se pudo cargar: " + e.message));
+  }
+
+  function mostrarPestana(nombre) {
+    estado.pestana = nombre;
+    for (const b of document.querySelectorAll("#pestanas button")) {
+      b.setAttribute("aria-selected", String(b.dataset.p === nombre));
+    }
+    cargar();
+  }
+
+  function cargar() {
+    if (!estado.ticker) return;
+    const panel = $("panel");
+    const ronda = ++estado.ronda;
+    panel.replaceChildren(el("div", "cargando", "Cargando…"));
+    const tareas = { resumen: pestanaResumen, detalle: pestanaDetalle, modelos: pestanaModelos };
+    tareas[estado.pestana](panel, ronda).catch((e) => {
+      if (ronda === estado.ronda) mostrarError(panel, e);
+    });
+  }
+
+  function dibujarModelos() {
+    const caja = $("modelos");
+    caja.replaceChildren();
+    for (const m of estado.modelos) {
+      const b = el("button", "", nombreModelo(m));
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(m === estado.modelo));
+      b.addEventListener("click", () => { estado.modelo = m; dibujarModelos(); cargar(); });
+      caja.append(b);
+    }
+  }
+
+  async function iniciar() {
+    const caja = $("estado");
+    try {
+      const salud = await pedir("/health");
+      estado.tickers = salud.tickers;
+      estado.modelos = salud.modelos_cargados;
+      estado.modelo = salud.modelo_por_defecto;
+      estado.ticker = salud.tickers[0];
+
+      caja.classList.add("ok");
+      $("estado-texto").textContent =
+        "Servicio activo · entrenado hasta " + fecha(salud.entrenado_hasta) +
+        " · datos hasta " + fecha(salud.datos_hasta);
+
+      const lista = $("ticker");
+      for (const t of salud.tickers) lista.append(new Option(t, t));
+      lista.value = estado.ticker;
+      lista.disabled = false;
+      lista.addEventListener("change", () => {
+        estado.ticker = lista.value;
+        if (estado.pestana === "detalle") cargar(); else mostrarPestana("detalle");
+      });
+      for (const b of document.querySelectorAll("#pestanas button")) {
+        b.addEventListener("click", () => mostrarPestana(b.dataset.p));
+      }
+      dibujarModelos();
+      cargar();
+    } catch (e) {
+      caja.classList.add("mal");
+      $("estado-texto").textContent = "No se pudo conectar con la API";
+      mostrarError($("panel"), e);
+    }
+  }
+
+  iniciar();
+</script>
+</body>
+</html>

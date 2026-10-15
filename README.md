@@ -28,7 +28,7 @@ cp .env.example .env
 
 En PowerShell: `Copy-Item .env.example .env`.
 
-Los modelos entrenados están en la carpeta `models/` y se versionan directamente en Git (pesan menos de 1 MB en total), así que **no hace falta descargar nada más** para construir la imagen o levantar la API.
+Los modelos entrenados están en la carpeta `models/` y se versionan directamente en Git (pesan unos pocos MB en total, muy por debajo del límite de 100 MB), así que **no hace falta descargar nada más** para construir la imagen o levantar la API.
 
 ## 2. Cómo ejecutar
 
@@ -41,12 +41,17 @@ docker build -t prediccion-acciones .
 docker run --rm -p 8000:8000 prediccion-acciones
 ```
 
-Abre `http://localhost:8000/docs` para la documentación interactiva. Los dos endpoints:
+Abre `http://localhost:8000` para la **página web**, que consume la API, o `http://localhost:8000/docs` para la documentación interactiva. La página tiene tres pestañas: *Resumen de las 10* (probabilidad de subir de cada acción), *Detalle por acción* (predicción, gráfica de precio con medias móviles y cómo le fue al modelo en los días posteriores al corte) y *Acerca del modelo* (comparación contra el piso, gráfica de AUC y lectura del resultado). Las gráficas se dibujan en el navegador con SVG, sin librerías externas.
+
+Los endpoints principales son `/health` y `/predict`; los otros tres, de solo lectura, alimentan la página:
 
 | Endpoint | Qué hace |
 |---|---|
 | `GET /health` | Estado del servicio, modelos cargados, fecha de entrenamiento y tickers disponibles. |
 | `POST /predict` | Probabilidad de que la acción suba en el siguiente cierre. |
+| `GET /resumen` | Las 10 acciones con su probabilidad de subir, de mayor a menor. |
+| `GET /series/{ticker}` | Cierre y medias móviles de los últimos días, y las predicciones sobre días posteriores al corte. |
+| `GET /modelos` | Métricas de cada modelo contra el piso de exactitud. |
 
 Ejemplo:
 
@@ -54,7 +59,7 @@ Ejemplo:
 curl -X POST http://localhost:8000/predict -H "Content-Type: application/json" -d '{"ticker": "AMD", "modelo": "logistica"}'
 ```
 
-La respuesta incluye `ticker`, `modelo`, `fecha_datos`, `cierre`, `probabilidad_sube`, `umbral` y `prediccion` (`"sube"` o `"baja"`). El campo `modelo` es opcional (`logistica` por defecto, o `pytorch`). Un ticker que no existe responde **422** con un mensaje claro, no un error 500. El modelo se carga **una sola vez** al arrancar el servicio, no en cada petición.
+La respuesta incluye `ticker`, `modelo`, `fecha_datos`, `cierre`, `probabilidad_sube`, `umbral` y `prediccion` (`"sube"` o `"baja"`). El campo `modelo` es opcional (`logistica` por defecto, o `pytorch`). Un ticker que no existe (o un modelo que no está cargado) responde **422** con un mensaje claro, no un error 500. El modelo se carga **una sola vez** al arrancar el servicio, no en cada petición.
 
 Para que otro dispositivo de la misma red entre, usa `http://<IP-de-la-máquina>:8000` y permite el puerto 8000 en el firewall (perfil de red Privado).
 
@@ -80,11 +85,11 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-Hay 132 pruebas, entre ellas las del contrato de la API con `TestClient` (`tests/test_api.py`): salud, predicción válida, ticker inexistente (422), modelo inválido y petición mal formada.
+Hay más de 130 pruebas, entre ellas las del contrato de la API con `TestClient` (`tests/test_api.py`), que revisan `/health`, una predicción válida y los casos de entrada inválida (422).
 
-### App de Streamlit (opcional)
+### App de Streamlit (heredada, opcional)
 
-La interfaz web original quedó como grupo opcional de dependencias y ya no va en la imagen de Docker:
+Antes de la API, el proyecto tenía una interfaz en Streamlit. Se conserva como grupo opcional de dependencias y ya no va en la imagen de Docker; la página web actual es la de `/`:
 
 ```bash
 uv sync --group web
@@ -125,7 +130,7 @@ La validación cruzada es `TimeSeriesSplit` de 5 pliegues con un hueco (`gap`) d
 
 ![Exploración de retornos](reports/01_exploracion_retornos.png)
 
-Los retornos diarios están centrados en cero y los días de subida son poco más de la mitad (≈ 53 %). Eso fija el piso contra el que se compara todo: un modelo que siempre responde "sube" ya acierta ≈ 50 % en el holdout.
+Distribución de los retornos diarios de las 10 acciones. Los días de subida son poco más de la mitad del total, y eso fija el piso contra el que se compara todo: un modelo que siempre responde "sube" ya acierta ≈ 50 % en el holdout.
 
 ## 4. Resultados
 
@@ -210,7 +215,7 @@ src/prediccion_acciones/
 ├── features/            # ingeniería de variables y partición temporal
 ├── models/              # BaseModel, fábrica, sklearn, PyTorch
 ├── evaluation/          # métricas, validación cruzada, búsqueda
-├── api/                 # FastAPI: esquemas Pydantic y endpoints
+├── api/                 # FastAPI: esquemas Pydantic, endpoints y página web (static/)
 └── app/                 # servicio (lógica compartida), gráficas y pantalla de Streamlit
 ```
 
@@ -232,7 +237,7 @@ src/prediccion_acciones/
 - Un solo modelo para las 10 acciones (panel) en vez de uno por acción: más datos por modelo y menos riesgo de sobreajuste, a costa de ignorar diferencias propias de cada acción.
 - Características como retornos y razones, no precios: el mismo modelo sirve a todas las acciones, a costa de perder el nivel de precio.
 - Se priorizó evitar fugas de información (huecos en la validación, holdout abierto una vez, escalado dentro del `Pipeline`) sobre obtener métricas más vistosas.
-- Los modelos viven en Git (pesan menos de 1 MB) para que `docker build` funcione sin pasos manuales; DVC versiona los datos crudos y define las etapas reproducibles (`entrenar`, `reportes`).
+- Los modelos viven en Git (pocos MB) para que `docker build` funcione sin pasos manuales; DVC versiona los datos crudos y define las etapas reproducibles (`entrenar`, `reportes`).
 - La API expone la logística y la red; el boosting queda en el pipeline y las métricas, pero fuera del servicio para mantenerlo simple.
 - Docker usa `python:3.12-slim` con `uv`, capas ordenadas para aprovechar la caché (dependencias antes que el código), PyTorch solo CPU para reducir tamaño, usuario sin privilegios y `HEALTHCHECK` sobre `/health`.
 

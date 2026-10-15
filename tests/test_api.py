@@ -124,6 +124,71 @@ def test_la_documentacion_automatica_esta_disponible(cliente):
     assert "/predict" in cliente.get("/openapi.json").json()["paths"]
 
 
+def test_la_raiz_sirve_la_pagina_web_que_usa_la_api(cliente):
+    r = cliente.get("/")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    # La página llama a los mismos endpoints que el contrato de la API.
+    assert "/health" in r.text
+    assert "/predict" in r.text
+
+
+def test_la_pagina_web_no_aparece_en_la_documentacion_de_la_api(cliente):
+    assert "/" not in cliente.get("/openapi.json").json()["paths"]
+
+
+def test_resumen_ordena_las_10_acciones_de_mayor_a_menor(cliente):
+    r = cliente.get("/resumen", params={"modelo": "logistica"})
+    assert r.status_code == 200
+    cuerpo = r.json()
+    acciones = cuerpo["acciones"]
+    assert len(acciones) == 10
+    probs = [a["probabilidad_sube"] for a in acciones]
+    assert probs == sorted(probs, reverse=True)
+    for a in acciones:
+        esperado = "sube" if a["probabilidad_sube"] >= a["umbral"] else "baja"
+        assert a["prediccion"] == esperado
+    assert cuerpo["fecha_prediccion"] > cuerpo["fecha_datos"]
+
+
+def test_resumen_con_un_modelo_no_cargado_da_422(cliente):
+    r = cliente.get("/resumen", params={"modelo": "pytorch"})
+    assert r.status_code == 422
+
+
+def test_series_da_precios_con_medias_y_los_dias_no_vistos(cliente):
+    r = cliente.get("/series/amd", params={"dias": 60, "modelo": "logistica"})
+    assert r.status_code == 200
+    cuerpo = r.json()
+    assert cuerpo["ticker"] == "AMD"  # se normaliza a mayúsculas
+    assert len(cuerpo["precios"]) == 60
+    assert all(p["sma20"] is not None for p in cuerpo["precios"])
+    assert cuerpo["fecha_corte"] == "2026-09-30"
+    no_vistos = cuerpo["dias_no_vistos"]
+    assert len(no_vistos) > 0
+    assert all(d["fecha"] > cuerpo["fecha_corte"] for d in no_vistos)
+    for d in no_vistos:
+        assert d["acierto"] == (d["prediccion"] == d["real"])
+
+
+def test_series_valida_el_ticker_y_el_rango_de_dias(cliente):
+    assert cliente.get("/series/ZZZZ").status_code == 422
+    assert cliente.get("/series/AMD", params={"dias": 5}).status_code == 422
+    assert cliente.get("/series/AMD", params={"dias": 9999}).status_code == 422
+
+
+def test_modelos_compara_contra_el_piso(cliente):
+    r = cliente.get("/modelos")
+    assert r.status_code == 200
+    cuerpo = r.json()
+    claves = [m["clave"] for m in cuerpo["modelos"]]
+    assert claves == ["dummy", "logistica"]
+    dummy = cuerpo["modelos"][0]
+    assert cuerpo["piso_exactitud"] == dummy["exactitud_holdout"]
+    assert 0 < cuerpo["piso_exactitud"] < 1
+    assert set(cuerpo["periodos"]) == {"entrenamiento", "holdout", "adelante"}
+
+
 def test_los_modelos_del_esquema_son_los_de_la_app():
     from typing import get_args
 
