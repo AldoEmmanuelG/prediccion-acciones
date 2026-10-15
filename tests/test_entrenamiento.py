@@ -62,6 +62,7 @@ def test_guarda_modelo_metricas_y_tablas_para_la_app(corrida):
         "logistica.joblib",
         "metricas.json",
         "prueba_adelante.csv",
+        "prediccion_holdout.csv",
         "precios_app.csv",
     ):
         assert (salida / archivo).exists(), archivo
@@ -122,3 +123,10 @@ def test_con_mlflow_queda_una_corrida_por_modelo(cfg, fuente, tmp_path):
     assert len(corridas) == 2
     assert "metrics.cv_auc" in corridas.columns
     assert "metrics.holdout_auc" in corridas.columns
+
+
+def test_el_holdout_guarda_las_probabilidades_de_cada_modelo(corrida):
+    _, salida = corrida
+    holdout = pd.read_csv(salida / "prediccion_holdout.csv")
+    assert {"fecha", "ticker", "y", "dummy", "logistica"} <= set(holdout.columns)
+    assert holdout[["dummy", "logistica"]].notna().all().all()

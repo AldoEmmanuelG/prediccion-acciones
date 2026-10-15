@@ -1,5 +1,10 @@
-# Pipeline de entrenamiento. `dvc repro` lo corre solo si cambiaron los datos,
-# la configuracion o el codigo; si nada cambio, reutiliza lo que ya esta en cache.
+# Pipeline: `dvc repro` corre cada etapa solo si cambiaron sus dependencias; si nada
+# cambio, reutiliza lo que ya esta guardado.
+#
+# Los modelos y las figuras son chicos (menos de 100 MB) y van en Git, porque la
+# imagen de Docker los necesita adentro. Por eso `cache: false`: DVC registra su
+# huella en dvc.lock pero no los saca de Git. Los datos crudos (data/raw) si
+# viven en el remoto de DVC.
 stages:
   entrenar:
     cmd: python -m prediccion_acciones.entrenamiento
@@ -8,9 +13,36 @@ stages:
       - configs/config.yaml
       - src/prediccion_acciones
     outs:
-      - models/logistica.joblib
-      - models/boosting.joblib
-      - models/pytorch.pt
-      - models/metricas.json
-      - models/prueba_adelante.csv
+      - models/logistica.joblib:
+          cache: false
+      - models/boosting.joblib:
+          cache: false
+      - models/pytorch.pt:
+          cache: false
+      - models/metricas.json:
+          cache: false
+      - models/prueba_adelante.csv:
+          cache: false
+      - models/prediccion_holdout.csv:
+          cache: false
+      - models/historia_pytorch.csv:
+          cache: false
+      - models/precios_app.csv:
+          cache: false
+
+  reportes:
+    cmd: python -m prediccion_acciones.reportes
+    deps:
       - models/precios_app.csv
+      - models/historia_pytorch.csv
+      - models/prediccion_holdout.csv
+      - models/metricas.json
+      - configs/config.yaml
+      - src/prediccion_acciones/reportes.py
+    outs:
+      - reports/01_exploracion_retornos.png:
+          cache: false
+      - reports/02_curvas_aprendizaje.png:
+          cache: false
+      - reports/03_resultados_holdout.png:
+          cache: false
