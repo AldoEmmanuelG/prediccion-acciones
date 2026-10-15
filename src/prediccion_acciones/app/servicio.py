@@ -48,6 +48,10 @@ class ErrorArtefactos(RuntimeError):
     """Faltan los archivos que deja el entrenamiento."""
 
 
+class ErrorEntrada(ValueError):
+    """El ticker o el modelo pedidos no existen."""
+
+
 @dataclass(frozen=True)
 class Artefactos:
     """Todo lo que la app necesita, cargado una sola vez."""
@@ -123,6 +127,46 @@ def cargar_artefactos(
         metricas=metricas,
         adelante=adelante,
         modelos=modelos,
+    )
+
+
+@dataclass(frozen=True)
+class Prediccion:
+    """Resultado de predecir el siguiente cierre de una accion."""
+
+    ticker: str
+    modelo: str
+    fecha_datos: pd.Timestamp
+    cierre: float
+    probabilidad_sube: float
+    umbral: float
+
+    @property
+    def sube(self) -> bool:
+        return self.probabilidad_sube >= self.umbral
+
+
+def prediccion_ticker(art: Artefactos, ticker: str, modelo: str) -> Prediccion:
+    """Probabilidad de que `ticker` suba en el siguiente cierre, con `modelo`."""
+    if ticker not in art.tickers:
+        raise ErrorEntrada(f"Ticker '{ticker}' no disponible. Opciones: {art.tickers}")
+    if modelo not in art.modelos:
+        raise ErrorEntrada(
+            f"Modelo '{modelo}' no disponible. Opciones: {sorted(art.modelos)}"
+        )
+    fila = art.features[art.features["ticker"] == ticker].sort_values("fecha").tail(1)
+    precio = art.precios[
+        (art.precios["ticker"] == ticker)
+        & (art.precios["fecha"] == fila["fecha"].iloc[0])
+    ]
+    m = art.modelos[modelo]
+    return Prediccion(
+        ticker=ticker,
+        modelo=modelo,
+        fecha_datos=fila["fecha"].iloc[0],
+        cierre=float(precio["cierre"].iloc[0]),
+        probabilidad_sube=float(m.predict_proba(fila)[0]),
+        umbral=float(m.umbral),
     )
 
 

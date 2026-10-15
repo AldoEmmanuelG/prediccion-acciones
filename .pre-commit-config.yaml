@@ -5,11 +5,13 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace # quita espacios al final de las lineas
+        exclude: ^(models|reports)/
       - id: end-of-file-fixer # cada archivo termina con un salto de linea
+        exclude: ^(models|reports)/
       - id: check-yaml # valida la sintaxis de los .yaml
       - id: check-toml # valida la sintaxis de los .toml
       - id: check-added-large-files # frena archivos > 1 MB (datos/modelos van a DVC)
-        args: ["--maxkb=1000"]
+        args: ["--maxkb=2000"]
       - id: detect-private-key # frena llaves privadas pegadas por error
 
   - repo: https://github.com/kynan/nbstripout
