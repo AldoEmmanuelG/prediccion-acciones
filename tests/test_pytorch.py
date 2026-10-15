@@ -137,3 +137,36 @@ def test_registra_las_metricas_de_cada_epoca(datos, caplog):
         modelo = _modelo().fit(X, y, fechas=fechas)
     mensajes = [r.getMessage() for r in caplog.records if "auc val" in r.getMessage()]
     assert len(mensajes) == len(modelo.historia)
+
+
+def test_el_checkpoint_trae_optimizador_epoca_y_mejor_metrica(datos, tmp_path):
+    X, y, fechas = datos
+    modelo = _modelo().fit(X, y, fechas=fechas)
+    ruta = tmp_path / "mlp.pt"
+    modelo.guardar(ruta)
+    with ruta.open("rb") as archivo:
+        checkpoint = torch.load(archivo, weights_only=True)
+    assert {"state_dict", "optimizador", "epoca_mejor", "auc_validacion"} <= set(
+        checkpoint
+    )
+    assert {"state", "param_groups"} <= set(checkpoint["optimizador"])
+    assert checkpoint["epoca_mejor"] == modelo.epoca_mejor
+
+
+def test_al_cargar_se_recuperan_la_historia_y_el_optimizador(datos, tmp_path):
+    X, y, fechas = datos
+    modelo = _modelo().fit(X, y, fechas=fechas)
+    modelo.guardar(tmp_path / "mlp.pt")
+    cargado = ModeloPytorch.cargar(tmp_path / "mlp.pt")
+    assert cargado.estado_optimizador is not None
+    pd.testing.assert_frame_equal(cargado.historia, modelo.historia)
+
+
+def test_el_checkpoint_puede_reanudar_el_entrenamiento(datos, tmp_path):
+    X, y, fechas = datos
+    modelo = _modelo().fit(X, y, fechas=fechas)
+    modelo.guardar(tmp_path / "mlp.pt")
+    cargado = ModeloPytorch.cargar(tmp_path / "mlp.pt")
+    optimizador = torch.optim.Adam(cargado.red.parameters())
+    optimizador.load_state_dict(cargado.estado_optimizador)
+    assert len(optimizador.state) > 0

@@ -31,6 +31,7 @@ class RutasConfig:
     datos_procesados: Path
     modelos: Path
     mlflow_experimento: str
+    reportes: Path = Path("reports")
 
 
 @dataclass(frozen=True)
@@ -116,6 +117,7 @@ class Config:
                     datos_procesados=Path(r["datos_procesados"]),
                     modelos=Path(r["modelos"]),
                     mlflow_experimento=str(r["mlflow_experimento"]),
+                    reportes=Path(r.get("reportes", "reports")),
                 ),
                 datos=DatosConfig(
                     tickers_objetivo=tuple(d["tickers_objetivo"]),

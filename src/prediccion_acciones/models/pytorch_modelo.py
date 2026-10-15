@@ -86,6 +86,7 @@ class ModeloPytorch(BaseModel):
         self.historia: pd.DataFrame | None = None
         self.epoca_mejor = 0
         self.auc_validacion = float("nan")
+        self.estado_optimizador: dict[str, Any] | None = None
         self._media: torch.Tensor | None = None
         self._escala: torch.Tensor | None = None
 
@@ -126,7 +127,8 @@ class ModeloPytorch(BaseModel):
         )
 
         historia = []
-        mejor_auc, mejor_epoca, mejor_estado, sin_mejora = -np.inf, 0, None, 0
+        mejor_auc, mejor_epoca, sin_mejora = -np.inf, 0, 0
+        mejor_estado, mejor_optimizador = None, None
         for epoca in range(1, p.epocas_max + 1):
             red.train()
             suma, n = 0.0, 0
@@ -158,6 +160,7 @@ class ModeloPytorch(BaseModel):
             if auc_va > mejor_auc + EPSILON_AUC:
                 mejor_auc, mejor_epoca, sin_mejora = auc_va, epoca, 0
                 mejor_estado = copy.deepcopy(red.state_dict())
+                mejor_optimizador = copy.deepcopy(optimizador.state_dict())
             else:
                 sin_mejora += 1
             if sin_mejora >= p.paciencia:
@@ -171,6 +174,7 @@ class ModeloPytorch(BaseModel):
         self.historia = pd.DataFrame(historia)
         self.epoca_mejor = mejor_epoca
         self.auc_validacion = float(mejor_auc)
+        self.estado_optimizador = mejor_optimizador
         logger.info(
             "MLP entrenado: mejor epoca %d de %d, AUC validacion %.4f",
             mejor_epoca,
@@ -197,7 +201,12 @@ class ModeloPytorch(BaseModel):
         return torch.sigmoid(self.red(x)).numpy()
 
     def guardar(self, ruta: Path | str) -> None:
-        """Un solo archivo con pesos, arquitectura, columnas y escalador."""
+        """Un solo archivo: checkpoint completo mas lo que hace falta para predecir.
+
+        Checkpoint: pesos, estado del optimizador, mejor epoca y mejor metrica.
+        Para predecir: arquitectura, columnas, escalador y umbral. Se guarda
+        tambien la historia por epoca, para poder dibujar las curvas despues.
+        """
         ruta = Path(ruta)
         self._exigir_entrenado()
         ruta.parent.mkdir(parents=True, exist_ok=True)
@@ -215,6 +224,8 @@ class ModeloPytorch(BaseModel):
             "escala": self._escala,
             "epoca_mejor": self.epoca_mejor,
             "auc_validacion": self.auc_validacion,
+            "optimizador": self.estado_optimizador,
+            "historia": self.historia.to_dict("list"),
         }
         with ruta.open("wb") as archivo:
             torch.save(paquete, archivo)
@@ -243,6 +254,10 @@ class ModeloPytorch(BaseModel):
         modelo._media, modelo._escala = p["media"], p["escala"]
         modelo.epoca_mejor = p["epoca_mejor"]
         modelo.auc_validacion = p["auc_validacion"]
+        # Los checkpoints viejos no traen estos dos campos.
+        modelo.estado_optimizador = p.get("optimizador")
+        if "historia" in p:
+            modelo.historia = pd.DataFrame(p["historia"])
         modelo._ajustado = True
         return modelo
 

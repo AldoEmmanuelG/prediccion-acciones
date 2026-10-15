@@ -14,7 +14,7 @@ import json
 import logging
 import os
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, is_dataclass
+from dataclasses import asdict, dataclass, field, is_dataclass
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +69,10 @@ class ResultadoModelo:
     holdout: Metricas
     adelante: Metricas | None
     ruta_modelo: Path | None
+    # Para las figuras y los archivos del reporte; no se imprimen en el repr.
+    prob_holdout: np.ndarray | None = field(default=None, repr=False, compare=False)
+    historia: pd.DataFrame | None = field(default=None, repr=False, compare=False)
+    epoca_mejor: int | None = None
 
 
 @dataclass(frozen=True)
@@ -172,9 +176,8 @@ def entrenar_candidato(
 
         # 2) Holdout: se mide una sola vez, con el modelo entrenado solo con 'tr'.
         modelo_h = crear().fit(X_tr, y_tr, fechas=f_tr)
-        m_holdout = calcular_metricas(
-            ho["y"].to_numpy(), modelo_h.predict_proba(ho[columnas]), umbral
-        )
+        prob_holdout = modelo_h.predict_proba(ho[columnas])
+        m_holdout = calcular_metricas(ho["y"].to_numpy(), prob_holdout, umbral)
 
         # 3) Modelo final: todo hasta la fecha de corte. Es el que usa la app.
         final = crear().fit(
@@ -230,6 +233,10 @@ def entrenar_candidato(
         holdout=m_holdout,
         adelante=m_adelante,
         ruta_modelo=ruta,
+        prob_holdout=prob_holdout,
+        # Solo la red tiene historia por epoca; viene del modelo final.
+        historia=getattr(final, "historia", None),
+        epoca_mejor=getattr(final, "epoca_mejor", None),
     )
     logger.info(
         "%-10s CV AUC %.4f (+-%.4f) | holdout AUC %.4f | umbral %.2f",
@@ -250,7 +257,7 @@ def _escribir_reporte(
     precios: pd.DataFrame,
     directorio: Path,
 ) -> None:
-    """Archivos que lee la app: metricas, prueba hacia adelante y precios."""
+    """Archivos que leen la app y los reportes: metricas, tablas y curvas."""
 
     def periodo(t: pd.DataFrame) -> list[str]:
         return [str(t["fecha"].min().date()), str(t["fecha"].max().date())]
@@ -279,6 +286,20 @@ def _escribir_reporte(
     }
     with (directorio / "metricas.json").open("w", encoding="utf-8") as f:
         json.dump(reporte, f, indent=2, default=_a_json, ensure_ascii=False)
+
+    # Probabilidades del holdout de cada modelo (el dummy es el piso): de aqui
+    # salen la curva ROC y la comparacion contra el piso en reports/.
+    holdout = particiones.holdout[["fecha", "ticker", "y"]].reset_index(drop=True)
+    for r in resultados:
+        if r.prob_holdout is not None:
+            holdout[r.nombre] = np.asarray(r.prob_holdout)
+    holdout.to_csv(directorio / "prediccion_holdout.csv", index=False)
+
+    # Curvas de aprendizaje: una fila por epoca del modelo final de la red.
+    for r in resultados:
+        if r.historia is not None:
+            historia = r.historia.assign(mejor=r.historia["epoca"] == r.epoca_mejor)
+            historia.to_csv(directorio / f"historia_{r.nombre}.csv", index=False)
 
     if probs:
         ad = particiones.adelante[["fecha", "ticker", "y"]].join(pd.DataFrame(probs))

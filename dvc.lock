@@ -5,8 +5,8 @@ stages:
     deps:
     - path: configs/config.yaml
       hash: md5
-      md5: 4c6c939dad9cc7b2d9a439d8baa6ee2b
-      size: 1771
+      md5: 43baddd324528a99bd11f2db9102b2a6
+      size: 1834
     - path: data/raw
       hash: md5
       md5: 5336b8317519effaa535f097867a2abc.dir
@@ -14,14 +14,18 @@ stages:
       nfiles: 1
     - path: src/prediccion_acciones
       hash: md5
-      md5: a4bfb86321a1347e9471fcffb124d684.dir
-      size: 93605
-      nfiles: 27
+      md5: e466f93af52b6999097a2be0c6655048.dir
+      size: 101875
+      nfiles: 28
     outs:
     - path: models/boosting.joblib
       hash: md5
       md5: 5027f356b68c118b3a12aca2e4f96ad2
       size: 87762
+    - path: models/historia_pytorch.csv
+      hash: md5
+      md5: 9556cb300ce780889538f76bf2f11381
+      size: 776
     - path: models/logistica.joblib
       hash: md5
       md5: 248c81d87270c079f5e625f7b0aca60b
@@ -34,11 +38,55 @@ stages:
       hash: md5
       md5: f2aa76fccfde6eb2f91381f50b5058cb
       size: 1296255
+    - path: models/prediccion_holdout.csv
+      hash: md5
+      md5: 4493db6f7c9a8a63081fcac108fd00b7
+      size: 100495
     - path: models/prueba_adelante.csv
       hash: md5
       md5: 6fed4d96f5268af95c4b53bcd931fa5d
       size: 5568
     - path: models/pytorch.pt
       hash: md5
-      md5: c266fd7c0e5696399e52ebc67e574a2b
-      size: 7821
+      md5: f53f71291d43621228b1c6eaa83c4425
+      size: 20949
+  reportes:
+    cmd: python -m prediccion_acciones.reportes
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 43baddd324528a99bd11f2db9102b2a6
+      size: 1834
+    - path: models/historia_pytorch.csv
+      hash: md5
+      md5: 9556cb300ce780889538f76bf2f11381
+      size: 776
+    - path: models/metricas.json
+      hash: md5
+      md5: 3dc8ca2aeda789df1311857511a52c9c
+      size: 3106
+    - path: models/precios_app.csv
+      hash: md5
+      md5: f2aa76fccfde6eb2f91381f50b5058cb
+      size: 1296255
+    - path: models/prediccion_holdout.csv
+      hash: md5
+      md5: 4493db6f7c9a8a63081fcac108fd00b7
+      size: 100495
+    - path: src/prediccion_acciones/reportes.py
+      hash: md5
+      md5: 5beef0ead06825952df5c6fe44c88773
+      size: 5848
+    outs:
+    - path: reports/01_exploracion_retornos.png
+      hash: md5
+      md5: e4614be8578d3b7a0916a10cd07b99b1
+      size: 35031
+    - path: reports/02_curvas_aprendizaje.png
+      hash: md5
+      md5: 89767aa0da0bdab25a8b4cd425169502
+      size: 95935
+    - path: reports/03_resultados_holdout.png
+      hash: md5
+      md5: 9f59a3e7fac96346555599a5c9a462ed
+      size: 101417

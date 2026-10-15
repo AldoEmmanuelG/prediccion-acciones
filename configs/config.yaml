@@ -7,6 +7,7 @@ rutas:
   datos_procesados: data/processed
   modelos: models
   mlflow_experimento: prediccion-acciones
+  reportes: reports # figuras del README (curvas, resultados)
 
 datos:
   # Objetivo: acciones que el modelo predice y que aparecen en el menu de la app.
