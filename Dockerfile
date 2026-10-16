@@ -3,9 +3,12 @@
 # correr `docker build -t prediccion-acciones .`
 FROM python:3.12-slim
 
+# UV_NO_CACHE: uv no deja dentro de la imagen su cache de paquetes descargados.
+# Sin esto la cache duplica el entorno virtual (~1.3 GB de mas en la imagen).
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1
 
 RUN pip install --no-cache-dir uv
 
