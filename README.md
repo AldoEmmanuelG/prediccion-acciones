@@ -183,7 +183,9 @@ Cada entrenamiento registra parámetros, métricas y el modelo en MLflow (SQLite
 uv run mlflow ui --backend-store-uri sqlite:///mlflow.db
 ```
 
-<!-- Captura del dashboard de MLflow: agregar aquí cuando esté en reports/ -->
+![Dashboard de MLflow con las cuatro corridas finales](reports/mlflow_dashboard.png)
+
+*Una corrida por modelo, con el AUC de validación cruzada (`cv_auc`), del holdout (`holdout_auc`) y de la prueba hacia adelante (`adelante_auc`). El dummy marca el piso de 0.5. La prueba hacia adelante tiene solo 70 filas, así que es muy ruidosa y no debe leerse como una mejora real.*
 
 ## 5. Arquitectura
 
