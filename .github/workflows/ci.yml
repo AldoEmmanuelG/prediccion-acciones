@@ -1,0 +1,32 @@
+# Integración continua: en cada Pull Request (y en cada push a main) corre el
+# linter y las pruebas. Si algo falla, el PR no debe fusionarse.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  calidad-y-pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar Python y dependencias (según uv.lock)
+        run: uv sync --frozen
+
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Ruff (formato)
+        run: uv run ruff format --check .
+
+      - name: Pruebas
+        run: uv run pytest -q
