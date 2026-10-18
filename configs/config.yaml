@@ -12,7 +12,7 @@ rutas:
 datos:
   # Objetivo: acciones que el modelo predice y que aparecen en el menu de la app.
   tickers_objetivo: [AMD, ORCL, IT, IBM, OSIS, LMT, KOF, HUM, ANF, LII]
-  # Contexto: NO se predicen; su retorno del dia entra como caracteristica extra.
+  # Contexto: reservado. Hoy NO se descargan ni entran al modelo (solo se descargan los objetivo).
   tickers_contexto: [SPY, NVDA]
   fecha_inicio: "2015-01-01"
   horizonte_dias: 1 # se predice la direccion del cierre de t+1
@@ -21,7 +21,7 @@ features:
   ventanas_retorno: [1, 2, 5, 10] # rezagos del retorno diario
   ventanas_rolling: [5, 10, 20] # media y desviacion movil
   rsi_periodo: 14
-  ventanas_contexto: [1, 5] # retornos de SPY y NVDA usados como contexto
+  ventanas_contexto: [1, 5] # reservado: hoy no se usa (SPY y NVDA no se descargan)
 
 validacion:
   n_splits: 5 # pliegues de TimeSeriesSplit

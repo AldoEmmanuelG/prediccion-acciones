@@ -100,7 +100,7 @@ uv run streamlit run src/prediccion_acciones/app/main.py
 
 **Problema.** Clasificación binaria: dado el cierre de hoy, ¿el cierre de mañana será mayor? La etiqueta es `y = 1` si `Close(t+1) > Close(t)`. Se entrena un solo modelo sobre el panel de 10 acciones.
 
-**Acciones objetivo:** AMD, ORCL, IT, IBM, OSIS, LMT, KOF, HUM, ANF, LII. **Contexto** (no se predicen): SPY y NVDA, cuyo retorno entra como característica.
+**Acciones objetivo:** AMD, ORCL, IT, IBM, OSIS, LMT, KOF, HUM, ANF, LII. **Contexto** (configurado, pero no usado en esta versión): SPY y NVDA figuran en `config.yaml` como tickers de contexto, pero no se descargan ni entran al modelo; este solo recibe los indicadores calculados de cada acción objetivo. Usarlos como características queda como mejora futura.
 
 **Fuente:** Yahoo Finance vía `yfinance`, precios ajustados por splits y dividendos, desde 2015-01-01.
 
